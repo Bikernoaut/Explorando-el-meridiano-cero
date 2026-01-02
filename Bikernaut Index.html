@@ -1,0 +1,399 @@
+<!-- Chosen Palette: BIKERNAUT Official (BMW M Heritage + Warm Neutrals) -->
+<!-- Application Structure Plan: Dashboard interactivo que ahora integra IA para potenciar la exploración. 
+    Se añaden secciones de "Misión con IA" para generación de rutas y redacción de bitácoras. -->
+<!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BIKERNAUT | Mission Control & AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Black+Ops+One&display=swap');
+
+        :root {
+            --bmw-sky: #81C4FF;
+            --bmw-yale: #16588E;
+            --bmw-crimson: #E7222E;
+            --warm-bg: #f5f5f4;
+        }
+
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background-color: var(--warm-bg);
+            color: #1c1917;
+        }
+
+        .font-brand {
+            font-family: 'Black Ops One', cursive;
+        }
+
+        .hexagon-css {
+            width: 150px;
+            height: 165px;
+            background-color: #1A1A1A;
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            margin: 0 auto;
+            transition: transform 0.3s ease;
+        }
+
+        .hexagon-inner-border {
+            position: absolute;
+            inset: 4px;
+            background-color: #1A1A1A;
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            height: 350px;
+        }
+
+        .ai-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f9f9f9 100%);
+            border-left: 4px solid var(--bmw-yale);
+        }
+
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid var(--bmw-crimson);
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 4px;
+            padding: 16px;
+            position: fixed;
+            z-index: 100;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+        }
+
+        .toast.show {
+            visibility: visible;
+            animation: fadein 0.5s, fadeout 0.5s 2.5s;
+        }
+
+        @keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+        @keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col">
+
+    <div id="toast" class="toast">Mensaje del sistema</div>
+
+    <nav class="bg-[#1A1A1A] text-white border-b-4 border-[#E7222E] sticky top-0 z-50 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center gap-3">
+                    <span class="font-brand text-2xl tracking-wider italic">BIKER<span class="text-[#E7222E]">NAUT</span></span>
+                </div>
+                <div class="hidden sm:flex space-x-8 uppercase tracking-widest font-bold text-xs">
+                    <button onclick="scrollToSection('mission')" class="hover:text-[#81C4FF]">Misión</button>
+                    <button onclick="scrollToSection('ai-tools')" class="text-[#81C4FF] animate-pulse">IA Tools</button>
+                    <button onclick="scrollToSection('philosophy')" class="hover:text-[#81C4FF]">Filosofía</button>
+                    <button onclick="scrollToSection('specs')" class="hover:text-[#81C4FF]">Specs</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- MISSION & MANIFESTO -->
+    <section id="mission" class="bg-white pt-12 pb-16">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <span class="inline-block py-1 px-3 rounded-full bg-blue-100 text-[#16588E] text-xs font-bold tracking-[0.2em] mb-4 uppercase">Módulo de Exploración</span>
+            <h1 class="text-5xl md:text-6xl font-black text-gray-900 mb-6 italic tracking-tight uppercase">MANIFIESTO</h1>
+            <p id="manifesto-text" class="mt-4 max-w-3xl mx-auto text-xl text-gray-500 leading-relaxed italic font-medium">
+                "Para el <span class="text-black font-bold uppercase">Bikernaut</span>, el mapa es solo una sugerencia. Navegamos en un Kilociclo de libertad absoluta..."
+            </p>
+        </div>
+    </section>
+
+    <!-- NEW: AI TOOLS SECTION -->
+    <section id="ai-tools" class="py-16 bg-white border-t border-gray-100">
+        <div class="max-w-7xl mx-auto px-4">
+            <div class="mb-10">
+                <h2 class="text-3xl font-black text-gray-900 uppercase tracking-tighter">Módulo de Inteligencia ✨</h2>
+                <p class="text-gray-500 italic">Potenciando la exploración con tecnología de vanguardia.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- AI Route Generator -->
+                <div class="ai-card p-6 rounded-xl shadow-sm border border-gray-200">
+                    <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+                        <span>📍</span> Generador de Rutas Adventure ✨
+                    </h3>
+                    <div class="space-y-4">
+                        <input type="text" id="route-input" placeholder="Ej: De CDMX a las Dunas de Samalayuca" class="w-full p-3 border rounded bg-gray-50 text-sm">
+                        <button onclick="generateRoute()" id="route-btn" class="w-full bg-[#16588E] text-white font-bold py-3 rounded hover:bg-[#1a3a5a] transition-all uppercase tracking-widest text-xs">
+                            Generar Ruta Exploratoria ✨
+                        </button>
+                        <div id="route-result" class="mt-4 text-sm text-gray-700 bg-white p-4 rounded border hidden max-h-60 overflow-y-auto whitespace-pre-wrap"></div>
+                    </div>
+                </div>
+
+                <!-- AI Log Assistant -->
+                <div class="ai-card p-6 rounded-xl shadow-sm border border-gray-200">
+                    <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+                        <span>📝</span> Redactor de Bitácora ✨
+                    </h3>
+                    <div class="space-y-4">
+                        <textarea id="log-input" rows="3" placeholder="Ej: Hoy hubo mucha lluvia en la sierra, la GS respondió bien..." class="w-full p-3 border rounded bg-gray-50 text-sm"></textarea>
+                        <button onclick="enhanceLog()" id="log-btn" class="w-full bg-[#E7222E] text-white font-bold py-3 rounded hover:bg-[#b01a23] transition-all uppercase tracking-widest text-xs">
+                            Profesionalizar Bitácora ✨
+                        </button>
+                        <div id="log-result" class="mt-4 text-sm text-gray-700 bg-white p-4 rounded border hidden max-h-60 overflow-y-auto whitespace-pre-wrap italic"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- PHILOSOPHY & CHART -->
+    <section id="philosophy" class="py-16 bg-stone-100 border-t border-gray-200">
+        <div class="max-w-7xl mx-auto px-4">
+            <h2 class="text-3xl font-black text-gray-900 uppercase tracking-tighter mb-10">Telemetría B.I.K.E.R.</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                <div class="space-y-4" id="biker-accordion"></div>
+                <div class="bg-white p-6 rounded-2xl shadow-xl border border-gray-200">
+                    <div class="chart-container">
+                        <canvas id="bikerChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- VISUAL SPECS -->
+    <section id="specs" class="py-16 bg-white border-t border-gray-200">
+        <div class="max-w-7xl mx-auto px-4">
+            <h2 class="text-3xl font-black text-gray-900 uppercase tracking-tighter mb-12 uppercase">Ingeniería Visual</h2>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
+                <div class="space-y-6">
+                    <h3 class="text-xl font-bold">Colores M-Heritage</h3>
+                    <div id="color-palette" class="space-y-3"></div>
+                </div>
+                <div class="flex flex-col items-center justify-center p-8 bg-stone-100 rounded-xl border border-gray-200">
+                    <div class="hexagon-css">
+                        <div class="hexagon-inner-border">
+                            <div class="text-white font-brand text-xl italic tracking-tighter z-10 text-center leading-none">BIKER<br><span class="text-[#E7222E]">NAUT</span></div>
+                        </div>
+                    </div>
+                    <p class="mt-6 text-xs text-gray-400 font-bold uppercase tracking-widest">Logo Specs: Hexágono Industrial</p>
+                </div>
+                <div class="space-y-4">
+                    <h3 class="text-xl font-bold">Materiales</h3>
+                    <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                        <ul class="text-sm space-y-2">
+                            <li>• Vinilo Grado Automotriz</li>
+                            <li>• Laminado Mate Anti-Reflejo</li>
+                            <li>• Adhesivo de alta resistencia</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="bg-[#1A1A1A] text-gray-400 py-12 text-center mt-auto">
+        <h2 class="font-brand text-3xl text-white italic uppercase">BIKER<span class="text-[#E7222E]">NAUT</span></h2>
+        <p class="text-xs tracking-[0.3em] uppercase mt-2">Bitácora de Exploración • México</p>
+    </footer>
+
+    <script>
+        // API CONFIGURATION
+        const apiKey = ""; // La clave se inyecta automáticamente en el entorno
+        const geminiModel = "gemini-2.5-flash-preview-09-2025";
+
+        async function callGemini(prompt, systemInstruction = "") {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${apiKey}`;
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                systemInstruction: { parts: [{ text: systemInstruction }] }
+            };
+
+            let delay = 1000;
+            for (let i = 0; i < 5; i++) {
+                try {
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    const data = await response.json();
+                    return data.candidates?.[0]?.content?.parts?.[0]?.text || "Error en respuesta.";
+                } catch (e) {
+                    if (i === 4) throw e;
+                    await new Promise(r => setTimeout(r, delay));
+                    delay *= 2;
+                }
+            }
+        }
+
+        // AI FEATURES
+        async function generateRoute() {
+            const input = document.getElementById('route-input').value;
+            const btn = document.getElementById('route-btn');
+            const result = document.getElementById('route-result');
+            if (!input) return showToast("Indica un destino");
+
+            btn.disabled = true;
+            btn.innerHTML = `<span class="loader"></span> Calculando...`;
+            result.classList.add('hidden');
+
+            const system = "Eres un experto explorador BIKERNAUT. Crea rutas épicas para motos adventure (GS 900). Enfócate en caminos secundarios, retos topográficos y puntos de interés técnicos.";
+            const prompt = `Genera una ruta de exploración desde/hacia: ${input}. Incluye: Distancia estimada, tipo de terreno y 3 paradas estratégicas "Bikernaut". Mantén un tono profesional y técnico.`;
+
+            try {
+                const text = await callGemini(prompt, system);
+                result.innerText = text;
+                result.classList.remove('hidden');
+            } catch (e) {
+                showToast("Falla en la telemetría IA");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Generar Ruta Exploratoria ✨";
+            }
+        }
+
+        async function enhanceLog() {
+            const input = document.getElementById('log-input').value;
+            const btn = document.getElementById('log-btn');
+            const result = document.getElementById('log-result');
+            if (!input) return showToast("Escribe algunas notas");
+
+            btn.disabled = true;
+            btn.innerHTML = `<span class="loader"></span> Procesando...`;
+            result.classList.add('hidden');
+
+            const system = "Eres un redactor de bitácoras de expedición de élite. Transforma notas informales en reportes técnicos, épicos y literarios bajo la filosofía BIKER (Bitácora, Inspiración, Kilociclo, Eternidad, Resistencia).";
+            const prompt = `Convierte esto en una entrada de Bitácora BIKERNAUT: ${input}`;
+
+            try {
+                const text = await callGemini(prompt, system);
+                result.innerText = text;
+                result.classList.remove('hidden');
+            } catch (e) {
+                showToast("Error al procesar bitácora");
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "Profesionalizar Bitácora ✨";
+            }
+        }
+
+        // UI & DATA
+        const bikerData = [
+            { letter: 'B', word: 'BITÁCORA', definition: 'El arte de registrar el camino.', color: '#1A1A1A', score: 85 },
+            { letter: 'I', word: 'INSPIRACIÓN', definition: 'La chispa de lo desconocido.', color: '#81C4FF', score: 90 },
+            { letter: 'K', word: 'KILOCICLO', definition: 'La sintonía perfecta hombre-máquina.', color: '#16588E', score: 100 },
+            { letter: 'E', word: 'ETERNIDAD', definition: 'Momentos fuera del tiempo.', color: '#64748b', score: 80 },
+            { letter: 'R', word: 'RESISTENCIA', definition: 'Fortaleza ante la adversidad.', color: '#E7222E', score: 95 }
+        ];
+
+        const colors = [
+            { name: 'Sky Blue', hex: '#81C4FF', text: 'black' },
+            { name: 'Yale Blue', hex: '#16588E', text: 'white' },
+            { name: 'Crimson', hex: '#E7222E', text: 'white' },
+            { name: 'Onyx', hex: '#1A1A1A', text: 'white' }
+        ];
+
+        function scrollToSection(id) { document.getElementById(id).scrollIntoView({ behavior: 'smooth' }); }
+
+        function renderAccordion() {
+            document.getElementById('biker-accordion').innerHTML = bikerData.map((item, index) => `
+                <div class="bg-white rounded-lg border border-gray-200 overflow-hidden cursor-pointer p-4 flex items-center group transition-all" onclick="toggleAccordion(${index})">
+                    <div class="w-10 h-10 flex items-center justify-center rounded font-brand text-white text-xl" style="background-color: ${item.color}">${item.letter}</div>
+                    <div class="ml-4 flex-grow"><h4 class="font-bold uppercase tracking-wider">${item.word}</h4></div>
+                    <div id="content-${index}" class="hidden text-xs text-gray-500 mt-2 w-full italic">${item.definition}</div>
+                </div>
+            `).join('');
+        }
+
+        function toggleAccordion(index) {
+            document.getElementById(`content-${index}`).classList.toggle('hidden');
+        }
+
+        function renderColors() {
+            document.getElementById('color-palette').innerHTML = colors.map(c => `
+                <div class="p-3 rounded flex justify-between items-center cursor-pointer shadow-sm hover:scale-[1.02] transition-transform" style="background-color: ${c.hex}; color: ${c.text}" onclick="copyHex('${c.hex}')">
+                    <span class="text-xs font-bold uppercase">${c.name}</span>
+                    <span class="font-mono text-xs">${c.hex}</span>
+                </div>
+            `).join('');
+        }
+
+        function copyHex(hex) {
+            const el = document.createElement('textarea');
+            el.value = hex;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            showToast(`Copiado: ${hex}`);
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg;
+            t.className = "toast show";
+            setTimeout(() => { t.className = "toast"; }, 2500);
+        }
+
+        function initChart() {
+            new Chart(document.getElementById('bikerChart'), {
+                type: 'polarArea',
+                data: {
+                    labels: bikerData.map(d => d.word),
+                    datasets: [{
+                        data: bikerData.map(d => d.score),
+                        backgroundColor: bikerData.map(d => d.color + 'BB'),
+                        borderColor: '#fff',
+                        borderWidth: 2
+                    }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { legend: { display: false } },
+                    scales: { r: { ticks: { display: false } } }
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderAccordion();
+            renderColors();
+            initChart();
+        });
+    </script>
+</body>
+</html>
